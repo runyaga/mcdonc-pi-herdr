@@ -7,7 +7,35 @@
 }:
 let
   # Get herdr from the upstream flake
-  herdr = inputs.herdr.packages.${pkgs.system}.default;
+  herdrUpstream = inputs.herdr.packages.${pkgs.system}.default;
+
+  # The upstream herdr package builds a vendored libghostty-vt with zig. As
+  # part of that, zig's build.zig constructs a benchmark executable that links
+  # libc, which makes zig locate the macOS SDK via LibCInstallation.findNative.
+  # zig 0.15 does this by shelling out to `xcode-select --print-path`
+  # (isSdkInstalled) and `xcrun --sdk macosx --show-sdk-path` (getSdk). The
+  # upstream darwin package ships no SDK, so both commands fail inside the Nix
+  # build sandbox and the build aborts with `error: DarwinSdkNotFound`.
+  #
+  # We patch the package on darwin to supply an in-store SDK. `apple-sdk`
+  # provides the SDK, sets DEVELOPER_DIR/SDKROOT, and propagates xcbuild's
+  # `xcrun`. It does not provide `xcode-select`, which zig also calls, so we
+  # add a tiny shim that prints DEVELOPER_DIR. zig's final archive step also
+  # spawns Apple's `libtool` (to build libghostty-vt-fat.a), which isn't on
+  # PATH either, so we add cctools' libtool.
+  herdr =
+    if pkgs.stdenv.isDarwin then
+      herdrUpstream.overrideAttrs (old: {
+        buildInputs = (old.buildInputs or [ ]) ++ [ pkgs.apple-sdk ];
+        nativeBuildInputs = (old.nativeBuildInputs or [ ]) ++ [
+          pkgs.cctools.libtool
+          (pkgs.writeShellScriptBin "xcode-select" ''
+            echo "''${DEVELOPER_DIR:-/Library/Developer/CommandLineTools}"
+          '')
+        ];
+      })
+    else
+      herdrUpstream;
 in
 {
 
