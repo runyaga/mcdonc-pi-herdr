@@ -5,10 +5,6 @@
   inputs,
   ...
 }:
-let
-  # Get herdr from the upstream flake
-  herdr = inputs.herdr.packages.${pkgs.system}.default;
-in
 {
 
   dotenv.enable = true;
@@ -25,23 +21,19 @@ in
     };
   };
 
-  # Use pre-built herdr from upstream flake and testing tools
-  packages = [ herdr pkgs.tmux ];
+  # Don't use herdr from flake - it requires Zig build that fails on macOS with Nix
+  # Instead, we'll use pi directly from npm and the herdr extension from src/
+  packages = [ pkgs.tmux ];
 
-  # Isolate herdr to project-local state directory
-  # All these will be set in enterShell since they need $PWD expansion
-  
-  # Add bin/ to PATH so herdr can find herdr-shell-with-pi
+  # Add bin/ to PATH
   env.PATH = "\${PWD}/bin:\${PATH}";
 
-  # Symlink the extension so changes are immediately visible
   enterShell = ''
-    # Create isolated herdr state directory
-    mkdir -p .devenv/state/herdr
+    # Create isolated state directory
+    mkdir -p .devenv/state
     
-    # Set environment variables to isolate herdr from global config
-    export HERDR_CONFIG_PATH="$PWD/.herdr.toml"
-    export HERDR_SOCKET_PATH="$PWD/.devenv/state/herdr/herdr.sock"
+    # Set environment variables
+    export HERDR_ENV=1
     export XDG_CONFIG_HOME="$PWD/.devenv/state"
     
     if [ ! -e .pi/extensions/herdr ]; then
@@ -52,16 +44,12 @@ in
     fi
     
     echo ""
-    echo "📝 Project-local herdr config: .herdr.toml"
-    echo "   New panes will automatically run: pi-herdr"
-    echo "   (pi --no-extensions --extension src/index.ts)"
+    echo "📝 Using pi from npm with herdr extension from src/"
+    echo "   Start pi with: pi --no-extensions --extension src/index.ts"
     echo ""
-    echo "💡 Start herdr in this shell and create panes - they will run pi with only the herdr extension!"
   '';
 
   scripts.pi-herdr.exec = ''
-    # Use the locally installed pi from node_modules
-    # Find the project root by looking for package.json
     PROJECT_ROOT=$(pwd)
     while [ ! -f "$PROJECT_ROOT/package.json" ] && [ "$PROJECT_ROOT" != "/" ]; do
       PROJECT_ROOT=$(dirname "$PROJECT_ROOT")
@@ -72,18 +60,16 @@ in
       exit 1
     fi
 
-    # Check for resume marker (written by /bg command)
     RESUME_FILE="$PROJECT_ROOT/.devenv/state/herdr/resume-session"
     FORK_FLAG=""
     if [ -f "$RESUME_FILE" ]; then
       SESSION_PATH=$(cat "$RESUME_FILE" 2>/dev/null)
       if [ -n "$SESSION_PATH" ]; then
         FORK_FLAG="--fork $SESSION_PATH"
-        rm -f "$RESUME_FILE"  # Remove marker so only one pane picks it up
+        rm -f "$RESUME_FILE"
       fi
     fi
 
-    # Pass LLM provider settings from environment if set
     PROVIDER_FLAGS=""
     if [ -n "''${PI_HERDR_PROVIDER:-}" ]; then
       PROVIDER_FLAGS="$PROVIDER_FLAGS --provider $PI_HERDR_PROVIDER"
