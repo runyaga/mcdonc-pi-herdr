@@ -1,0 +1,8 @@
+{
+  "name": "pi-herdr-extension",
+  "version": "0.1.0",
+  "description": "Pi extension for herdr terminal workspace manager integration",
+  "pi": {
+    "extensions": ["./index.ts"]
+  }
+}

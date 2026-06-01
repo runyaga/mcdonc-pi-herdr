@@ -1,0 +1,7 @@
+onboarding = false
+# Project-local herdr configuration
+# This configures herdr to use pi with only the herdr extension for new panes
+
+[terminal]
+# Use the pi-herdr script from devenv (runs pi --no-extensions --extension src/index.ts)
+default_shell = "pi-herdr"

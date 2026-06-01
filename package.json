@@ -1,0 +1,17 @@
+{
+  "name": "mcdonc-pi-herdr",
+  "version": "0.1.0",
+  "description": "Herdr-native background jobs and conversation forking for pi",
+  "private": true,
+  "type": "module",
+  "keywords": ["pi-package", "pi", "herdr", "background", "fork", "panes", "tabs"],
+  "author": "Chris McDonough",
+  "license": "MIT",
+  "pi": {
+    "extensions": ["./index.ts"]
+  },
+  "dependencies": {
+    "@earendil-works/pi-coding-agent": "latest",
+    "@earendil-works/pi-tui": "latest"
+  }
+}

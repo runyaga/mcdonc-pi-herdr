@@ -1,0 +1,6 @@
+inputs:
+  herdr:
+    url: github:ogulcancelik/herdr
+    flake: true
+
+reload: false
